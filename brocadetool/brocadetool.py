@@ -7,6 +7,8 @@ import socket
 import logging
 import argparse
 import subprocess
+from pysnmp import debug
+from pysnmp.entity.rfc3413.oneliner import cmdgen
 
 
 # Grabbing the user that is running this script for logging purposes
@@ -59,14 +61,20 @@ class is_pingable_action(argparse.Action):
 
 
 class Client():
-    def connect(self):
-        pass
+    def __init__(self, args):
+        self.debug = args.debug
+        self.host = args.host
+        self.passwd = args.passwd
+        self.mib = args.mib
 
-    def close(self):
-        pass
+    def get(self):
+        cmdGen = cmdgen.CommandGenerator()
 
-    def get_value(self):
-        pass
+        errorIndication, errorStatus, errorIndex, varBinds = cmdGen.getCmd(
+            cmdgen.CommunityData('public'),
+            cmdgen.UdpTransportTarget((host, 161)),
+            cmdgen.MibVariable('SNMPv2-MIB', 'sysName', 0)
+        )
 
 
 def main():
@@ -78,10 +86,9 @@ def main():
         "host", metavar='BROCADE', action=is_pingable_action, help="IP or \
         name of Brocade"
     )
-    parser.add_argument("--user", dest="user", help="Brocade user")
     parser.add_argument(
-        "--passwd", dest="passwd", help="Password for brocade user. Default \
-        is to fetch from brocadetool.conf for user api_user"
+        "--passwd", dest="passwd", help="Community password for brocade user. \
+        Default is to fetch from brocadetool.conf for user api_user"
     )
     parser.add_argument(
         "--debug", action="store_true", dest="debug", help="Shows what's \
@@ -110,7 +117,6 @@ def main():
 
     # Getting arguments
     args = parser.parse_args()
-    debug = args.debug
 
     # Getting class, based on subparser called from argparse.
     try:
