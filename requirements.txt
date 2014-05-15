@@ -1,2 +1,4 @@
 argparse
-PySNMP
+PyYAML
+pysnmp
+pysnmp-mibs

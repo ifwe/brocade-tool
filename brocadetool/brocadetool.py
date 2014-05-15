@@ -1,44 +1,14 @@
 #!/usr/bin/env python
 
-import os
-import sys
-import pysnmp
-import socket
-import logging
 import argparse
+import logging
+import os
+import socket
 import subprocess
-from pysnmp import debug
-from pysnmp.entity.rfc3413.oneliner import cmdgen
+import sys
 
-
-# Grabbing the user that is running this script for logging purposes
-if os.getenv('SUDO_USER'):
-    user = os.getenv('SUDO_USER')
-else:
-    user = os.getenv('USER')
-
-# Setting up logging
-logFile = '/var/log/brocade-tool/brocade-tool.log'
-try:
-    local_host = socket.gethostbyaddr(socket.gethostname())[1][0]
-except (socket.herror, socket.gaierror), e:
-    local_host = 'localhost'
-logger = logging.getLogger(local_host)
-logger.setLevel(logging.DEBUG)
-
-try:
-    ch = logging.FileHandler(logFile)
-except IOError, e:
-    print >> sys.stderr, e
-    sys.exit(1)
-
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    '%(asctime)s %(name)s - %(levelname)s - %(message)s',
-    datefmt='%b %d %H:%M:%S'
-)
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+import snmp
+import utils
 
 
 class is_pingable_action(argparse.Action):
@@ -60,26 +30,77 @@ class is_pingable_action(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class Client():
+class Base(object):
     def __init__(self, args):
         self.debug = args.debug
         self.host = args.host
-        self.passwd = args.passwd
-        self.mib = args.mib
 
-    def get(self):
-        cmdGen = cmdgen.CommandGenerator()
+        try:
+            self.config = utils.fetch_config(args.config_file)
+        except IOError:
+            raise
 
-        errorIndication, errorStatus, errorIndex, varBinds = cmdGen.getCmd(
-            cmdgen.CommunityData('public'),
-            cmdgen.UdpTransportTarget((host, 161)),
-            cmdgen.MibVariable('SNMPv2-MIB', 'sysName', 0)
-        )
+        self.passwd = self.config['passwd']
+
+
+class Show(Base):
+    def __init__(self, args):
+        super(Show, self).__init__(args)
+        self.stat = args.stat
+
+    def ports(self):
+        self.total_number_of_ports = self.get_total_ports()
+        #output = snmp.get(self)
+        #print output
+
+    def get_total_ports(self):
+        self.mib_value = 'ifNumber'
+        self.mib_value_instance = 0
+
+        return snmp.get(self)
 
 
 def main():
+    """
+    Main function
+    @return: Exit status
+    """
+    # Grabbing the user that is running this script for logging purposes
+    if os.getenv('SUDO_USER'):
+        user = os.getenv('SUDO_USER')
+    else:
+        user = os.getenv('USER')
+
+    # Setting up logging
+    log_file = '/var/log/brocade-tool/brocade-tool.log'
+    config_file = '/etc/brocadetool.conf'
+
+    try:
+        local_host = socket.gethostbyaddr(socket.gethostname())[1][0]
+    except (socket.herror, socket.gaierror), e:
+        local_host = 'localhost'
+    logger = logging.getLogger(local_host)
+    logger.setLevel(logging.DEBUG)
+
+    try:
+        ch = logging.FileHandler(log_file)
+    except IOError, e:
+        print >> sys.stderr, e
+        sys.exit(1)
+
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s %(name)s - %(levelname)s - %(message)s',
+        datefmt='%b %d %H:%M:%S'
+    )
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
     # Created parser.
     parser = argparse.ArgumentParser()
+
+    # Set some defaults
+    parser.set_defaults(config_file=config_file)
 
     # Global args
     parser.add_argument(
@@ -88,7 +109,7 @@ def main():
     )
     parser.add_argument(
         "--passwd", dest="passwd", help="Community password for brocade user. \
-        Default is to fetch from brocadetool.conf for user api_user"
+        Default is to fetch from brocadetool.conf"
     )
     parser.add_argument(
         "--debug", action="store_true", dest="debug", help="Shows what's \
@@ -107,16 +128,20 @@ def main():
         'show', help='sub-command for showing objects'
     )
     subparser_show = parser_show.add_subparsers(dest='subparserName')
-    subparser_show.add_parser('ports', help='Shows all ports')
-    parser_show_port = subparser_show.add_parser(
-        'port', help='Shows stats for a port'
-    )
-    parser_show_port.add_argument(
-        'port', help='Shows stats for a port'
-    )
+    parser_show_ports = subparser_show.add_parser('ports',
+                                                  help='sub-command for '
+                                                       'showing stats about '
+                                                       'all ports')
+    parser_show_ports.add_argument('stat', help='What stat(s) to show')
 
     # Getting arguments
     args = parser.parse_args()
+
+    if args.debug:
+        debug.setLogger(debug.Debug('all'))
+
+    # Getting method, based on subparser called from argparse.
+    method = args.subparserName.replace('-', '')
 
     # Getting class, based on subparser called from argparse.
     try:
@@ -139,8 +164,8 @@ def main():
         getattr(brocade_tool, method)()
         msg = "%s executed \'%s\' on %s" % (user, args, args.host)
         logger.info(msg)
-    except (AttributeError, RuntimeError, KeyError, IOError):
-        msg = "%s, %s" % (user, sys.exc_info()[1])
+    except (AttributeError, RuntimeError, KeyError, IOError) as e:
+        msg = "%s, %s" % (user, e)
         print >> sys.stderr, msg
         logger.critical(msg)
         return 1
