@@ -43,11 +43,11 @@ class Base(object):
             raise
 
         self.passwd = self.config['passwd']
-        self.start_index = self.config['start_port_number']
+        self.start_port_index = self.config['start_port_index']
 
     def get_oid_by_name(self):
         snmp_type = 'getCmd'
-        snmp_args = ('IF-MIB', self.stat, self.start_index)
+        snmp_args = ('IF-MIB', self.stat, self.start_port_index)
 
         output = snmp.get(self, snmp_type, snmp_args)
         return output[0][0].getMibNode().getName()

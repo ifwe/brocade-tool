@@ -1,2 +1,6 @@
 ---
-passwd: passwd
+# SNMP community password
+passwd:
+
+# Index of first port
+start_port_index:
