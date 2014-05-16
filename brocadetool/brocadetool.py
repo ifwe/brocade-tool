@@ -10,6 +10,8 @@ import sys
 import snmp
 import utils
 
+from pysnmp import debug
+
 
 class is_pingable_action(argparse.Action):
     """
@@ -41,6 +43,14 @@ class Base(object):
             raise
 
         self.passwd = self.config['passwd']
+        self.start_index = self.config['start_port_number']
+
+    def get_oid_by_name(self):
+        snmp_type = 'getCmd'
+        snmp_args = ('IF-MIB', self.stat, self.start_index)
+
+        output = snmp.get(self, snmp_type, snmp_args)
+        return output[0][0].getMibNode().getName()
 
 
 class Show(Base):
@@ -49,15 +59,14 @@ class Show(Base):
         self.stat = args.stat
 
     def ports(self):
-        self.total_number_of_ports = self.get_total_ports()
-        #output = snmp.get(self)
-        #print output
+        oid = self.get_oid_by_name()
+        oid = '.'.join(map(str, oid))
+        snmp_type = 'nextCmd'
+        snmp_args = (oid,)
 
-    def get_total_ports(self):
-        self.mib_value = 'ifNumber'
-        self.mib_value_instance = 0
-
-        return snmp.get(self)
+        output = snmp.get(self, snmp_type, snmp_args)
+        for entry in output:
+            print(entry)
 
 
 def main():
