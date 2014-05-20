@@ -11,9 +11,8 @@ def get(self, snmp_type, snmp_args):
                                                                      snmp_type)(
         cmdgen.CommunityData(self.passwd),
         cmdgen.UdpTransportTarget((self.host, 161)),
-        getattr(cmdgen, 'MibVariable')(*snmp_args),
-        lookupNames=True, lookupValues=True
-    )
+        getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True,
+        lookupValues=True)
 
     # Check for errors and print out results
     if error_indication:
@@ -28,3 +27,25 @@ def get(self, snmp_type, snmp_args):
             raise RuntimeError(msg)
         else:
             return var_binds
+
+
+def get_oid_node(self, stat):
+    snmp_type = 'getCmd'
+    snmp_args = ('IF-MIB', stat, self.start_port_index)
+
+    output = get(self, snmp_type, snmp_args)
+    return output[0][0].getMibNode().getName()
+
+
+def get_index_value(self, oid_node):
+    key_value = {}
+    snmp_type = 'nextCmd'
+    snmp_args = (oid_node,)
+
+    output = get(self, snmp_type, snmp_args)
+    for entry in output:
+        key = entry[0][0].getOid().prettyPrint().split('.')[-1]
+        value = entry[0][1].prettyPrint()
+        key_value[key] = {'name': value }
+
+    return key_value

@@ -13,7 +13,7 @@ import utils
 from pysnmp import debug
 
 
-class is_pingable_action(argparse.Action):
+class IsPingableAction(argparse.Action):
     """
     Used by argparse to see if the NetScaler specified is alive (pingable)
     """
@@ -45,12 +45,14 @@ class Base(object):
         self.passwd = self.config['passwd']
         self.start_port_index = self.config['start_port_index']
 
-    def get_oid_by_name(self):
-        snmp_type = 'getCmd'
-        snmp_args = ('IF-MIB', self.stat, self.start_port_index)
+    def get_port_ids(self, oid_node):
+        ports = {}
+        snmp_type = 'nextCmd'
+        snmp_args = (oid_node,)
 
-        output = snmp.get(self, snmp_type, snmp_args)
-        return output[0][0].getMibNode().getName()
+        output = snmp.get(self.host, self.passwd, snmp_type, snmp_args)
+        for entry in output:
+            ports[(entry[0][0].getOid().prettyPrint()).split('.')[-1]]
 
 
 class Show(Base):
@@ -59,14 +61,9 @@ class Show(Base):
         self.stat = args.stat
 
     def ports(self):
-        oid = self.get_oid_by_name()
-        oid = '.'.join(map(str, oid))
-        snmp_type = 'nextCmd'
-        snmp_args = (oid,)
-
-        output = snmp.get(self, snmp_type, snmp_args)
-        for entry in output:
-            print(entry)
+        oid_node = snmp.get_oid_node(self, 'ifName')
+        key_value = snmp.get_index_value(self, oid_node)
+        print(key_value)
 
 
 def main():
@@ -113,7 +110,7 @@ def main():
 
     # Global args
     parser.add_argument(
-        "host", metavar='BROCADE', action=is_pingable_action, help="IP or \
+        "host", metavar='BROCADE', action=IsPingableAction, help="IP or \
         name of Brocade"
     )
     parser.add_argument(
