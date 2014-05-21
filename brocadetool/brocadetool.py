@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import json
 import logging
 import os
 import socket
@@ -61,9 +62,25 @@ class Show(Base):
         self.stat = args.stat
 
     def ports(self):
+        """
+        Show all ports or specific stats, if --stat is given as an argument
+        """
         oid_node = snmp.get_oid_node(self, 'ifName')
-        key_value = snmp.get_index_value(self, oid_node)
-        print(key_value)
+        ifname_key_value = snmp.get_index_value(self, 'ifName', oid_node)
+
+        if not self.stat:
+            for key, value in sorted(ifname_key_value.iteritems()):
+                print(value['ifName'])
+        else:
+            for stat in self.stat:
+                oid_node = snmp.get_oid_node(self, stat)
+                stat_key_value = snmp.get_index_value(self, stat, oid_node)
+                for key, value in stat_key_value.iteritems():
+                    old_value = (ifname_key_value[key])
+                    value.update(old_value)
+                    ifname_key_value[key] = value
+
+            print(json.dumps(ifname_key_value))
 
 
 def main():
@@ -121,24 +138,21 @@ def main():
         "--debug", action="store_true", dest="debug", help="Shows what's \
         going on", default=False
     )
-    parser.add_argument(
-        "--dryrun", action="store_true", dest="dryrun", help="Dryrun",
-        default=False
-    )
 
     # Creating subparser.
-    subparser = parser.add_subparsers(dest='topSubparserName')
+    subparser = parser.add_subparsers(dest="topSubparserName")
 
     # Creating show subparser.
     parser_show = subparser.add_parser(
-        'show', help='sub-command for showing objects'
+        "show", help="sub-command for showing objects"
     )
-    subparser_show = parser_show.add_subparsers(dest='subparserName')
-    parser_show_ports = subparser_show.add_parser('ports',
-                                                  help='sub-command for '
-                                                       'showing stats about '
-                                                       'all ports')
-    parser_show_ports.add_argument('stat', help='What stat(s) to show')
+    subparser_show = parser_show.add_subparsers(dest="subparserName")
+    parser_show_ports = subparser_show.add_parser("ports",
+                                                  help="sub-command for "
+                                                       "showing stats about "
+                                                       "all ports")
+    parser_show_ports.add_argument("--stat", nargs="+",
+                                   help="What stat(s) to show")
 
     # Getting arguments
     args = parser.parse_args()
