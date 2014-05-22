@@ -2,5 +2,12 @@
 # SNMP community password
 passwd:
 
-# Index of first port
+# Index of first port, i.e. 805306369
 start_port_index:
+
+# graphite_server: 192.168.1.10
+# graphite_port: 2003
+# graphite_metric_base: foo.bar.brocade
+graphite_server:
+graphite_port:
+graphite_metric_base:

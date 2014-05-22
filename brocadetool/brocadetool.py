@@ -36,24 +36,20 @@ class IsPingableAction(argparse.Action):
 class Base(object):
     def __init__(self, args):
         self.debug = args.debug
+        self.dryrun = args.dryrun
         self.host = args.host
 
         try:
-            self.config = utils.fetch_config(args.config_file)
+            config = utils.fetch_config(args.config_file)
         except IOError:
             raise
 
-        self.passwd = self.config['passwd']
-        self.start_port_index = self.config['start_port_index']
-
-    def get_port_ids(self, oid_node):
-        ports = {}
-        snmp_type = 'nextCmd'
-        snmp_args = (oid_node,)
-
-        output = snmp.get(self.host, self.passwd, snmp_type, snmp_args)
-        for entry in output:
-            ports[(entry[0][0].getOid().prettyPrint()).split('.')[-1]]
+        self.passwd = config['passwd']
+        self.start_port_index = config['start_port_index']
+        if args.graphite:
+            self.graphite_server = config['graphite_server']
+            self.graphite_port = config['graphite_port']
+            self.graphite_metric_base = config['graphite_metric_base']
 
 
 class Show(Base):
@@ -64,13 +60,17 @@ class Show(Base):
     def ports(self):
         """
         Show all ports or specific stats, if --stat is given as an argument
+
+        Returns:
+            Newline separated list of ports or newline separated dict of ports
+            and user specified stats.
         """
-        oid_node = snmp.get_oid_node(self, 'ifName')
-        ifname_key_value = snmp.get_index_value(self, 'ifName', oid_node)
+        oid_node = snmp.get_oid_node(self, 'ifDescr')
+        ifname_key_value = snmp.get_index_value(self, 'ifDescr', oid_node)
 
         if not self.stat:
             for key, value in sorted(ifname_key_value.iteritems()):
-                print(value['ifName'])
+                print value['ifDescr']
         else:
             for stat in self.stat:
                 oid_node = snmp.get_oid_node(self, stat)
@@ -80,13 +80,45 @@ class Show(Base):
                     value.update(old_value)
                     ifname_key_value[key] = value
 
-            print(json.dumps(ifname_key_value))
+                    try:
+                        port = value['ifDescr'].split(' ')[2].replace(
+                            '/', '-')
+                    except IndexError:
+                        port = value['ifDescr']
+
+                    if hasattr(self, 'graphite_server'):
+                        metric = "%s.%s.ports.%s.%s" % (self
+                                                        .graphite_metric_base,
+                                                        self.host, port, stat)
+                        metric_value = value[stat]
+                        if self.debug:
+                            print "GRAPHITE DATA - %s: %s" % (metric,
+                                                             metric_value)
+
+                        if not self.dryrun:
+                            try:
+                                utils.send_to_graphite(self.graphite_server,
+                                                       self.graphite_port,
+                                                       metric,
+                                                       metric_value)
+                            except:
+                                raise
+
+            # If not sending to graphite, print output
+            if not hasattr(self, 'graphite_server'):
+                for key, value in sorted(ifname_key_value.iteritems()):
+                    print value
+
+
+                    #print(json.dumps(ifname_key_value))
 
 
 def main():
     """
     Main function
-    @return: Exit status
+
+    Returns:
+        Exit status
     """
     # Grabbing the user that is running this script for logging purposes
     if os.getenv('SUDO_USER'):
@@ -131,12 +163,23 @@ def main():
         name of Brocade"
     )
     parser.add_argument(
-        "--passwd", dest="passwd", help="Community password for brocade user. \
-        Default is to fetch from brocadetool.conf"
+        "--passwd",
+        help="Community password for brocade user. Default is to fetch from "
+             "brocadetool.conf"
     )
     parser.add_argument(
-        "--debug", action="store_true", dest="debug", help="Shows what's \
-        going on", default=False
+        "--dryrun", action="store_true", help="Dryrun", default=False
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Shows what's going on",
+        default=False
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="count", help="Shows more info"
+    )
+    parser.add_argument(
+        "--graphite", action="store_true", help="Send data to graphite?",
+        default=False
     )
 
     # Creating subparser.
@@ -157,7 +200,15 @@ def main():
     # Getting arguments
     args = parser.parse_args()
 
-    if args.debug:
+    if args.dryrun:
+        print "*" * 20, "DRYRUN DRYRUN!!", "*" * 20
+
+    if args.graphite and not args.dryrun:
+        print "*" * 20, "WILL SEND DATA TO GRAPHITE", "*" * 20
+
+    # Enable debug if verbose is set
+    if args.verbose:
+        parser.set_defaults(debug=True)
         debug.setLogger(debug.Debug('all'))
 
     # Getting method, based on subparser called from argparse.

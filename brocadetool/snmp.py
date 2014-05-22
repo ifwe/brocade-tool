@@ -1,5 +1,5 @@
 from pysnmp.entity.rfc3413.oneliner import cmdgen
-
+from pysnmp.smi.error import SmiError
 
 def get(self, snmp_type, snmp_args):
     """
@@ -20,12 +20,15 @@ def get(self, snmp_type, snmp_args):
     """
     cmd_gen = cmdgen.CommandGenerator()
 
-    error_indication, error_status, error_index, var_binds = getattr(cmd_gen,
-                                                                     snmp_type)(
-        cmdgen.CommunityData(self.passwd),
-        cmdgen.UdpTransportTarget((self.host, 161)),
-        getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True,
-        lookupValues=True)
+    try:
+        error_indication, error_status, error_index, var_binds = getattr(cmd_gen,
+                                                                         snmp_type)(
+            cmdgen.CommunityData(self.passwd),
+            cmdgen.UdpTransportTarget((self.host, 161)),
+            getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True)
+            #lookupValues=True)
+    except:
+        raise
 
     # Check for errors and print out results
     if error_indication:
@@ -50,13 +53,20 @@ def get_oid_node(self, stat):
         self: An object that makes it easier to grab the passwd and host.
         stat: SNMP MIB object.
 
+    Raises:
+        RuntimeError
+
     Returns:
         OID node for specific stat.
     """
     snmp_type = 'getCmd'
     snmp_args = ('IF-MIB', stat, self.start_port_index)
 
-    output = get(self, snmp_type, snmp_args)
+    try:
+        output = get(self, snmp_type, snmp_args)
+    except (SmiError, RuntimeError) as e:
+        raise RuntimeError(e)
+
     return output[0][0].getMibNode().getName()
 
 
@@ -69,6 +79,9 @@ def get_index_value(self, stat, oid_node):
         stat: SNMP MIB object.
         oid_node: OID Node return from get_index_value()
 
+    Raises:
+        RuntimeError
+
     Returns:
         A dict mapping index to values, in which values will be a dict as well.
     """
@@ -76,7 +89,11 @@ def get_index_value(self, stat, oid_node):
     snmp_type = 'nextCmd'
     snmp_args = (oid_node,)
 
-    output = get(self, snmp_type, snmp_args)
+    try:
+        output = get(self, snmp_type, snmp_args)
+    except (SmiError, RuntimeError) as e:
+        raise RuntimeError(e)
+
     for entry in output:
         key = int(entry[0][0].getOid().prettyPrint().split('.')[-1])
         value = entry[0][1].prettyPrint()
