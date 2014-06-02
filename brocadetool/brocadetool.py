@@ -20,9 +20,9 @@ class IsPingableAction(argparse.Action):
     """
 
     def __call__(self, parser, namespace, values, option_string=None):
-        pingCmd = "ping -c 1 -W 2 %s" % (values)
+        ping_cmd = "ping -c 1 -W 2 %s" % (values)
         process = subprocess.call(
-            pingCmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ping_cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
 
         if process != 0:
