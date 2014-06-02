@@ -35,18 +35,17 @@ class IsPingableAction(argparse.Action):
 
 class Base(object):
     def __init__(self, args):
-        self.debug = args.debug
-        self.dryrun = args.dryrun
-        self.host = args.host
+        for k, v in args.iteritems():
+            setattr(self, k, v)
 
         try:
-            config = utils.fetch_config(args.config_file)
+            config = utils.fetch_config(self.config_file)
         except IOError:
             raise
 
         self.passwd = config['passwd']
         self.start_port_index = config['start_port_index']
-        if args.graphite:
+        if self.graphite:
             self.graphite_server = config['graphite_server']
             self.graphite_port = config['graphite_port']
             self.graphite_metric_base = config['graphite_metric_base']
@@ -55,7 +54,6 @@ class Base(object):
 class Show(Base):
     def __init__(self, args):
         super(Show, self).__init__(args)
-        self.stat = args.stat
 
     def ports(self):
         """
@@ -132,7 +130,7 @@ def main():
 
     try:
         local_host = socket.gethostbyaddr(socket.gethostname())[1][0]
-    except (socket.herror, socket.gaierror), e:
+    except (socket.herror, socket.gaierror):
         local_host = 'localhost'
     logger = logging.getLogger(local_host)
     logger.setLevel(logging.DEBUG)
@@ -198,25 +196,24 @@ def main():
                                    help="What stat(s) to show")
 
     # Getting arguments
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
 
-    if args.dryrun:
+    if args['dryrun']:
         print "*" * 20, "DRYRUN DRYRUN!!", "*" * 20
 
-    if args.graphite and not args.dryrun:
+    if args['graphite'] and not args['dryrun']:
         print "*" * 20, "WILL SEND DATA TO GRAPHITE", "*" * 20
 
     # Enable debug if verbose is set
-    if args.verbose:
-        parser.set_defaults(debug=True)
+    if args['verbose']:
         debug.setLogger(debug.Debug('all'))
 
     # Getting method, based on subparser called from argparse.
-    method = args.subparserName.replace('-', '')
+    method = args['subparserName'].replace('-', '')
 
     # Getting class, based on subparser called from argparse.
     try:
-        klass = globals()[args.topSubparserName.capitalize()]
+        klass = globals()[args['topSubparserName'].capitalize()]
     except KeyError:
         msg = "%s, %s is not a valid subparser." % (user,
                                                     args.topSubparserName)
@@ -233,7 +230,7 @@ def main():
 
     try:
         getattr(brocade_tool, method)()
-        msg = "%s executed \'%s\' on %s" % (user, args, args.host)
+        msg = "%s executed \'%s\' on %s" % (user, args, args['host'])
         logger.info(msg)
     except (AttributeError, RuntimeError, KeyError, IOError) as e:
         msg = "%s, %s" % (user, e)
