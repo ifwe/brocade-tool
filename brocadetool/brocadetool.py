@@ -52,9 +52,6 @@ class Base(object):
 
 
 class Show(Base):
-    def __init__(self, args):
-        super(Show, self).__init__(args)
-
     def ports(self):
         """
         Show all ports or specific stats, if --stat is given as an argument
