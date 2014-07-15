@@ -27,6 +27,7 @@ if sys.version_info >= (2, 7) or sys.version_info >= (3, 2):
 if sys.version_info >= (2, 6) or sys.version_info >= (3, 1):
     PYTHON_REQ_BLACKLIST.append('simplejson')
 
+
 def load_requirements(fname):
     requirements = []
 
@@ -45,17 +46,45 @@ REQUIREMENTS = load_requirements('requirements.txt')
 
 setup(
     name='brocade-tool',
-    version='0.1',
-    packages = find_packages(),
+    version='0.1.0',
+    packages=find_packages(),
 
-    author = "Brian Glogower",
-    author_email = "bglogower@tagged.com",
-    description = "Monitors Brocades",
-    license = "MIT",
-    install_requires=REQUIREMENTS,
-    entry_points = {
+    author="Brian Glogower",
+    author_email="bglogower@tagged.com",
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: Apache Software License',
+        'Natural Language :: English',
+        'Operating System :: Unix',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Internet',
+        'Topic :: Software Development',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: System :: Networking',
+        'Topic :: System :: Networking :: Monitoring',
+        'Topic :: System :: Operating System',
+        'Topic :: System :: Systems Administration',
+        'Topic :: Utilities',
+    ],
+    description="Monitors Brocades",
+    entry_points={
         'console_scripts': [
             'brocade-tool = brocadetool.brocadetool:main',
-            ]
+        ]
     },
+    install_requires=REQUIREMENTS,
+    keywords=[
+        'Automation',
+        'Brocade',
+        'Networking',
+    ],
+    license="Apache v2.0",
+    url="https://github.tagged.com/siteops/brocade-tool",
 )

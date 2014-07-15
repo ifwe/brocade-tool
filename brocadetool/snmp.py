@@ -17,6 +17,7 @@ limitations under the License.
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 from pysnmp.smi.error import SmiError
 
+
 def get(self, snmp_type, snmp_args):
     """
     snmp get, similar to snmpget or snmpwalk, depending on snmp_type
@@ -37,12 +38,11 @@ def get(self, snmp_type, snmp_args):
     cmd_gen = cmdgen.CommandGenerator()
 
     try:
-        error_indication, error_status, error_index, var_binds = getattr(cmd_gen,
-                                                                         snmp_type)(
-            cmdgen.CommunityData(self.passwd),
-            cmdgen.UdpTransportTarget((self.host, 161)),
-            getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True)
-            #lookupValues=True)
+        error_indication, error_status, error_index, var_binds = getattr(
+            cmd_gen, snmp_type)(
+                cmdgen.CommunityData(self.passwd),
+                cmdgen.UdpTransportTarget((self.host, 161)),
+                getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True)
     except:
         raise
 
@@ -66,8 +66,8 @@ def get_oid_node(self, stat):
     Gets OID node based on specific stat.
 
     Args:
-        self: An object that makes it easier to grab the passwd and host.
-        stat: SNMP MIB object.
+        self: An object that makes it easier to grab the password and host
+        stat: SNMP MIB object
 
     Raises:
         RuntimeError
