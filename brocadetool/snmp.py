@@ -20,26 +20,21 @@ from pysnmp.smi.error import SmiError
 
 def get(self, snmp_type, snmp_args):
     """
-    snmp get, similar to snmpget or snmpwalk, depending on snmp_type
+    SNMP get, similar to snmpget or snmpwalk, depending on snmp_type
 
-    Args:
-        self: An object that makes it easier to grab the passwd and host
-        snmp_type: nextCmd or getCmd.
-        snmp_args: ('IF-MIB', stat, self.start_port_index) or node OID.
-
-    Returns:
-        Managed Object Instance is represented by a pair of Name and Value
-        items collectively.
-
-    Raises:
-        RunTimeError.
+    :param self: An object that makes it easier to grab the passwd and host
+    :param snmp_type: nextCmd or getCmd.
+    :param snmp_args: ('IF-MIB', stat, self.start_port_index) or node OID.
+    :returns: Managed Object Instance is represented by a pair of Name and Value
+    items collectively.
+    :raises: RunTimeError
 
     """
     cmd_gen = cmdgen.CommandGenerator()
 
     try:
-        error_indication, error_status, error_index, var_binds = getattr(
-            cmd_gen, snmp_type)(
+        error_indication, error_status, error_index, var_binds = \
+            getattr(cmd_gen, snmp_type)(
                 cmdgen.CommunityData(self.passwd),
                 cmdgen.UdpTransportTarget((self.host, 161)),
                 getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True)
@@ -65,15 +60,10 @@ def get_oid_node(self, stat):
     """
     Gets OID node based on specific stat.
 
-    Args:
-        self: An object that makes it easier to grab the password and host
-        stat: SNMP MIB object
-
-    Raises:
-        RuntimeError
-
-    Returns:
-        OID node for specific stat.
+    :param self: An object that makes it easier to grab the passwd and host.
+    :param stat: SNMP MIB object.
+    :raises: RuntimeError
+    :returns: OID node for specific stat.
     """
     snmp_type = 'getCmd'
     snmp_args = ('IF-MIB', stat, self.start_port_index)
@@ -90,16 +80,12 @@ def get_index_value(self, stat, oid_node):
     """
     Get values for a specific OID node, just like snmpwalk does
 
-    Args:
-        self: An object that makes it easier to grab the passwd and host.
-        stat: SNMP MIB object.
-        oid_node: OID Node return from get_index_value()
-
-    Raises:
-        RuntimeError
-
-    Returns:
-        A dict mapping index to values, in which values will be a dict as well.
+    :param self: An object that makes it easier to grab the passwd and host.
+    :param stat: SNMP MIB object.
+    :param oid_node: OID Node return from get_index_value()
+    :raises: RuntimeError
+    :returns: A dict mapping index to values, in which values will be a dict
+    as well.
     """
     key_value = {}
     snmp_type = 'nextCmd'

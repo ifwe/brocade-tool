@@ -17,7 +17,6 @@ limitations under the License.
 """
 
 import argparse
-import json
 import logging
 import os
 import socket
@@ -32,7 +31,7 @@ from pysnmp import debug
 
 class IsPingableAction(argparse.Action):
     """
-    Used by argparse to see if the NetScaler specified is alive (pingable)
+    Used by argparse to see if the specified brocade is alive (pingable)
     """
 
     def __call__(self, parser, namespace, values, option_string=None):
@@ -72,9 +71,8 @@ class Show(Base):
         """
         Show all ports or specific stats, if --stat is given as an argument
 
-        Returns:
-            Newline separated list of ports or newline separated dict of ports
-            and user specified stats.
+        :returns: Newline separated list of ports or newline separated dict of
+        ports and user specified stats.
         """
         oid_node = snmp.get_oid_node(self, 'ifDescr')
         ifname_key_value = snmp.get_index_value(self, 'ifDescr', oid_node)
@@ -121,15 +119,11 @@ class Show(Base):
                     print value
 
 
-                    #print(json.dumps(ifname_key_value))
-
-
 def main():
     """
     Main function
 
-    Returns:
-        Exit status
+    :returns: Exit status
     """
     # Grabbing the user that is running this script for logging purposes
     if os.getenv('SUDO_USER'):
@@ -169,44 +163,31 @@ def main():
     parser.set_defaults(config_file=config_file)
 
     # Global args
-    parser.add_argument(
-        "host", metavar='BROCADE', action=IsPingableAction, help="IP or \
-        name of Brocade"
-    )
-    parser.add_argument(
-        "--passwd",
-        help="Community password for brocade user. Default is to fetch from "
-             "brocadetool.conf"
-    )
-    parser.add_argument(
-        "--dryrun", action="store_true", help="Dryrun", default=False
-    )
-    parser.add_argument(
-        "--debug", action="store_true", help="Shows what's going on",
-        default=False
-    )
-    parser.add_argument(
-        "--verbose", "-v", action="count", help="Shows more info"
-    )
-    parser.add_argument(
-        "--graphite", action="store_true", help="Send data to graphite?",
-        default=False
-    )
+    parser.add_argument('host', metavar='BROCADE', action=IsPingableAction,
+                        help='IP or name of Brocade')
+    parser.add_argument('--passwd', help='Community password for brocade user. '
+                        'Default is to fetch from brocadetool.conf')
+    parser.add_argument('--dryrun', action='store_true', help='Dryrun',
+                        default=False)
+    parser.add_argument('--debug', action='store_true', help='Shows what\'s '
+                        'going on', default=False)
+    parser.add_argument('--verbose', '-v', action='count',
+                        help='Shows more info')
+    parser.add_argument('--graphite', action='store_true', help='Send data to '
+                        'graphite?', default=False)
 
     # Creating subparser.
-    subparser = parser.add_subparsers(dest="topSubparserName")
+    subparser = parser.add_subparsers(dest='top_subparser_name')
 
     # Creating show subparser.
-    parser_show = subparser.add_parser(
-        "show", help="sub-command for showing objects"
-    )
-    subparser_show = parser_show.add_subparsers(dest="subparserName")
-    parser_show_ports = subparser_show.add_parser("ports",
-                                                  help="sub-command for "
-                                                       "showing stats about "
-                                                       "all ports")
+    parser_show = subparser.add_parser('show', help='sub-command for showing '
+                                       'objects')
+    subparser_show = parser_show.add_subparsers(dest='subparser_name')
+    parser_show_ports = subparser_show.add_parser('ports', help='sub-command '
+                                                  'for showing stats about all '
+                                                  'ports')
     parser_show_ports.add_argument("--stat", nargs="+",
-                                   help="What stat(s) to show")
+                                   help='What stat(s) to show per port')
 
     # Getting arguments
     args = vars(parser.parse_args())
@@ -214,7 +195,7 @@ def main():
     if args['dryrun']:
         print "*" * 20, "DRYRUN DRYRUN!!", "*" * 20
 
-    if args['graphite'] and not args['dryrun']:
+    if args['graphite'] and not args['dryrun'] and args['debug']:
         print "*" * 20, "WILL SEND DATA TO GRAPHITE", "*" * 20
 
     # Enable debug if verbose is set
@@ -222,14 +203,14 @@ def main():
         debug.setLogger(debug.Debug('all'))
 
     # Getting method, based on subparser called from argparse.
-    method = args['subparserName'].replace('-', '')
+    method = args['subparser_name'].replace('-', '')
 
     # Getting class, based on subparser called from argparse.
     try:
-        klass = globals()[args['topSubparserName'].capitalize()]
+        klass = globals()[args['top_subparser_name'].capitalize()]
     except KeyError:
         msg = "%s, %s is not a valid subparser." % (user,
-                                                    args.topSubparserName)
+                                                    args.top_subparser_name)
         print >> sys.stderr, msg
         logger.critical(msg)
         return 1
@@ -254,5 +235,5 @@ def main():
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())
