@@ -1,5 +1,5 @@
 include CONTRIBUTE.md
 include LICENSE.txt
 include brocadetool.conf.example
-include README.md
+include README.rst
 include requirements.txt

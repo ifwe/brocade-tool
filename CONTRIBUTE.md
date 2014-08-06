@@ -2,7 +2,6 @@
 
 ## Coding Style
 * PEP8
-* Indents are 4 whitespaces
 
 ## Adding/Changing features
 * Please send your changes as a pull request
@@ -17,10 +16,10 @@
 
 ### Add a new second level argument, i.e. lb-vservers
 1. Create a new subparser off of parent subparser
-    * `subparser_show = parser_show.add_subparsers(dest='subparserName')`
+    * `subparser_show = parser_show.add_subparsers(dest='subparser_name')`
 1. Create parser
 
-        subparser_show = parser_show.add_subparsers(dest="subparserName")
+        subparser_show = parser_show.add_subparsers(dest="subparser_name")
 
     * If the subparser will need an argument
         -
@@ -38,6 +37,3 @@
                 
             def ports(self):
                 ...
-
-## Todo
-* Write unit tests using pytest
