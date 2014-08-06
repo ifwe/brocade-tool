@@ -43,6 +43,7 @@ def load_requirements(fname):
     return requirements
 
 REQUIREMENTS = load_requirements('requirements.txt')
+LONG_DESCRIPTION = open('README.rst').read()
 
 setup(
     name='brocade-tool',
@@ -86,5 +87,6 @@ setup(
         'Networking',
     ],
     license="Apache v2.0",
+    long_description=LONG_DESCRIPTION,
     url="https://github.tagged.com/siteops/brocade-tool",
 )
