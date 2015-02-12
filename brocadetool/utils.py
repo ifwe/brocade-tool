@@ -17,6 +17,9 @@ limitations under the License.
 import socket
 import time
 import yaml
+import yaml.parser
+
+import brocade_exceptions
 
 
 def fetch_config(config_file):
@@ -29,8 +32,12 @@ def fetch_config(config_file):
     try:
         with open(config_file, 'r') as f:
             config = yaml.load(f)
-    except IOError:
-        raise
+    except IOError as exc:
+        msg = "Could not read %s: %s" % (config_file, exc)
+        raise brocade_exceptions.ErrorReadingConfig(msg)
+    except yaml.parser.ParserError:
+        msg = "Invalid configuration YAML format"
+        raise brocade_exceptions.BadConfig(msg)
 
     return config
 

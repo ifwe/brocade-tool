@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import brocade_exceptions
+
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 from pysnmp.smi.error import SmiError
 
 
-def get(self, snmp_type, snmp_args):
+def get(config, oid, snmp_type):
     """
     SNMP get, similar to snmpget or snmpwalk, depending on snmp_type
 
@@ -30,14 +32,16 @@ def get(self, snmp_type, snmp_args):
     :raises: RunTimeError
 
     """
+    passwd = config['passwd']
+    host = config['host']
     cmd_gen = cmdgen.CommandGenerator()
 
     try:
         error_indication, error_status, error_index, var_binds = \
             getattr(cmd_gen, snmp_type)(
-                cmdgen.CommunityData(self.passwd),
-                cmdgen.UdpTransportTarget((self.host, 161)),
-                getattr(cmdgen, 'MibVariable')(*snmp_args), lookupNames=True)
+                cmdgen.CommunityData(passwd),
+                cmdgen.UdpTransportTarget((host, 161)), oid
+            )
     except:
         raise
 
@@ -76,7 +80,7 @@ def get_oid_node(self, stat):
     return output[0][0].getMibNode().getName()
 
 
-def get_index_value(self, stat, oid_node):
+def get_index_value(config, stat):
     """
     Get values for a specific OID node, just like snmpwalk does
 
@@ -87,18 +91,22 @@ def get_index_value(self, stat, oid_node):
     :returns: A dict mapping index to values, in which values will be a dict
     as well.
     """
-    key_value = {}
+    port_info = {}
     snmp_type = 'nextCmd'
-    snmp_args = (oid_node,)
+    try:
+        oid = (config['oids'][stat])
+    except KeyError:
+        msg = "%s could not be found in %s" % (stat, config['config_file'])
+        raise brocade_exceptions.InvalidStat(msg)
 
     try:
-        output = get(self, snmp_type, snmp_args)
-    except (SmiError, RuntimeError) as e:
-        raise RuntimeError(e)
+        output = get(config, oid, snmp_type)
+    except (SmiError, RuntimeError) as exc:
+        raise brocade_exceptions.Brocade(exc)
 
     for entry in output:
-        key = int(entry[0][0].getOid().prettyPrint().split('.')[-1])
+        port = int(entry[0][0].prettyPrint().split('.')[-1])
         value = entry[0][1].prettyPrint()
-        key_value[key] = {stat: value}
+        port_info[port] = value
 
-    return key_value
+    return port_info

@@ -22,11 +22,11 @@ import os
 import socket
 import subprocess
 import sys
+from pysnmp import debug
 
 import snmp
 import utils
-
-from pysnmp import debug
+import brocade_exceptions
 
 
 class IsPingableAction(argparse.Action):
@@ -50,73 +50,59 @@ class IsPingableAction(argparse.Action):
 
 class Base(object):
     def __init__(self, args):
-        for k, v in args.iteritems():
-            setattr(self, k, v)
-
         try:
-            config = utils.fetch_config(self.config_file)
+            self.config = utils.fetch_config(args['config_file'])
         except IOError:
             raise
 
-        self.passwd = config['passwd']
-        self.start_port_index = config['start_port_index']
-        if self.graphite:
-            self.graphite_server = config['graphite_server']
-            self.graphite_port = config['graphite_port']
-            self.graphite_metric_base = config['graphite_metric_base']
+        for k, v in args.items():
+            if k not in self.config:
+                self.config[k] = v
+
+        if args['graphite']:
+            self.graphite_server = self.config['graphite_server']
+            self.graphite_port = self.config['graphite_port']
+            self.graphite_metric_base = self.config['graphite_metric_base']
 
 
 class Show(Base):
     def ports(self):
         """
-        Show all ports or specific stats, if --stat is given as an argument
+        Show all stat information or specific stats, if --stat is given as an
+        argument
 
         :returns: Newline separated list of ports or newline separated dict of
         ports and user specified stats.
         """
-        oid_node = snmp.get_oid_node(self, 'ifDescr')
-        ifname_key_value = snmp.get_index_value(self, 'ifDescr', oid_node)
 
-        if not self.stat:
-            for key, value in sorted(ifname_key_value.iteritems()):
-                print value['ifDescr']
-        else:
-            for stat in self.stat:
-                oid_node = snmp.get_oid_node(self, stat)
-                stat_key_value = snmp.get_index_value(self, stat, oid_node)
-                for key, value in stat_key_value.iteritems():
-                    old_value = (ifname_key_value[key])
-                    value.update(old_value)
-                    ifname_key_value[key] = value
+        if not self.config['stat']:
+            stats = []
+            for stat in self.config['oids'].keys():
+                stats.append(stat)
+            self.config['stat'] = stats
 
-                    try:
-                        port = value['ifDescr'].split(' ')[2].replace(
-                            '/', '-')
-                    except IndexError:
-                        port = value['ifDescr']
+        for stat in self.config['stat']:
+            for port, value in sorted(snmp.get_index_value(self.config,
+                                                           stat).items()):
+                if self.config['graphite']:
+                    metric = "%s.%s.ports.%s.%s" % (
+                        self.graphite_metric_base, self.config['host'],
+                        port, stat
+                    )
+                    if self.config['debug']:
+                        print "GRAPHITE DATA - %s: %s" % (metric, value)
 
-                    if hasattr(self, 'graphite_server'):
-                        metric = "%s.%s.ports.%s.%s" % (self
-                                                        .graphite_metric_base,
-                                                        self.host, port, stat)
-                        metric_value = value[stat]
-                        if self.debug:
-                            print "GRAPHITE DATA - %s: %s" % (metric,
-                                                              metric_value)
-
-                        if not self.dryrun:
-                            try:
-                                utils.send_to_graphite(self.graphite_server,
-                                                       self.graphite_port,
-                                                       metric,
-                                                       metric_value)
-                            except:
-                                raise
-
-            # If not sending to graphite, print output
-            if not hasattr(self, 'graphite_server'):
-                for key, value in sorted(ifname_key_value.iteritems()):
-                    print value
+                    if not self.config['dryrun']:
+                        try:
+                            utils.send_to_graphite(self.graphite_server,
+                                                   self.graphite_port,
+                                                   metric, value)
+                        except:
+                            raise
+                else:
+                    print "stat: %s - port: %s - value: %s" % (
+                        stat,  port, value
+                    )
 
 
 def main():
@@ -208,26 +194,19 @@ def main():
     # Getting class, based on subparser called from argparse.
     try:
         klass = globals()[args['top_subparser_name'].capitalize()]
-    except KeyError:
+    except brocade_exceptions.Brocade:
         msg = "%s, %s is not a valid subparser." % (user,
-                                                    args.top_subparser_name)
+                                                    args['top_subparser_name'])
         print >> sys.stderr, msg
         logger.critical(msg)
         return 1
 
     try:
-        brocade_tool = klass(args)
-    except:
-        print >> sys.stderr, sys.exc_info()[1]
-        logger.critical(sys.exc_info()[1])
-        return 1
-
-    try:
-        getattr(brocade_tool, method)()
+        getattr(klass(args), method)()
         msg = "%s executed \'%s\' on %s" % (user, args, args['host'])
         logger.info(msg)
-    except (AttributeError, RuntimeError, KeyError, IOError) as e:
-        msg = "%s, %s" % (user, e)
+    except brocade_exceptions.Brocade as exc:
+        msg = "%s, %s" % (user, exc)
         print >> sys.stderr, msg
         logger.critical(msg)
         return 1
