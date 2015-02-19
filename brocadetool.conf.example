@@ -13,7 +13,7 @@ graphite_port:
 graphite_metric_base:
 
 # oids:
-#   - fcFxPortNxPortName: 1.3.6.1.3.42.2.1.2.4.1.12
-#   - fcFxPortConnectedNxPort: 1.3.6.1.3.42.2.1.2.4.1.13
+#  fcFxPortLinkFailures: 1.3.6.1.2.1.75.1.3.1.1.1
+#  fcFxPortSyncLosses: 1.3.6.1.2.1.75.1.3.1.1.2
 
 
