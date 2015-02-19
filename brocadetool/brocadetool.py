@@ -77,9 +77,14 @@ class Show(Base):
 
         if not self.config['stat']:
             stats = []
-            for stat in self.config['oids'].keys():
-                stats.append(stat)
-            self.config['stat'] = stats
+            try:
+                for stat in self.config['oids'].keys():
+                    stats.append(stat)
+            except KeyError:
+                msg = "Missing oids entry from config"
+                raise brocade_exceptions.BadConfig(msg)
+            else:
+                self.config['stat'] = stats
 
         for stat in self.config['stat']:
             for port, value in sorted(snmp.get_index_value(self.config,
