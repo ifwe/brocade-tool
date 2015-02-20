@@ -42,7 +42,7 @@ def fetch_config(config_file):
     return config
 
 
-def send_to_graphite(server, port, metric, value):
+def carbon_submit(server, port, metric, value):
     """
     Send data to graphite
 

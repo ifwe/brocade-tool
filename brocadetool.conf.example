@@ -1,18 +1,19 @@
 ---
 # SNMP community password
-passwd:
+# passwd:
 
-# Index of first port, i.e. 805306369
-start_port_index:
+# carbon_server: 192.168.1.10
+# carbon_port: 2003
+# carbon_metric_base: foo.bar.brocade
 
-# graphite_server: 192.168.1.10
-# graphite_port: 2003
-# graphite_metric_base: foo.bar.brocade
-graphite_server:
-graphite_port:
-graphite_metric_base:
-
+# To treat an OID as a rate, makes its value a list with second index = 'rate'
 # oids:
+#  swFCPortTxWords:
+#    - 1.3.6.1.4.1.1588.2.1.1.1.6.2.1.11
+#    - rate
+#  swFCPortRxWords:
+#    - 1.3.6.1.4.1.1588.2.1.1.1.6.2.1.12
+#    - rate
 #  fcFxPortLinkFailures: 1.3.6.1.2.1.75.1.3.1.1.1
 #  fcFxPortSyncLosses: 1.3.6.1.2.1.75.1.3.1.1.2
 

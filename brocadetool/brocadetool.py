@@ -19,9 +19,11 @@ limitations under the License.
 import argparse
 import logging
 import os
+import os.path
 import socket
 import subprocess
 import sys
+import yaml
 from pysnmp import debug
 
 import snmp
@@ -59,10 +61,10 @@ class Base(object):
             if k not in self.config:
                 self.config[k] = v
 
-        if args['graphite']:
-            self.graphite_server = self.config['graphite_server']
-            self.graphite_port = self.config['graphite_port']
-            self.graphite_metric_base = self.config['graphite_metric_base']
+        if args['carbon']:
+            self.carbon_server = self.config['carbon_server']
+            self.carbon_port = self.config['carbon_port']
+            self.carbon_metric_base = self.config['carbon_metric_base']
 
 
 class Show(Base):
@@ -74,7 +76,12 @@ class Show(Base):
         :returns: Newline separated list of ports or newline separated dict of
         ports and user specified stats.
         """
+        previous_data = {}
+        previous_data_file='%s/%s_%s' % (
+            os.path.expanduser('~'), self.config['host'], 'previous_data.yaml'
+        )
 
+        # Detecting if we will use stats from config or cli
         if not self.config['stat']:
             stats = []
             try:
@@ -86,28 +93,83 @@ class Show(Base):
             else:
                 self.config['stat'] = stats
 
+        # Read in any previous data from last run
+        try:
+            with open(previous_data_file, 'r') as fh:
+                previous_data = yaml.load(fh)
+        except IOError:
+            pass
+
+        # Lopping through all stats
         for stat in self.config['stat']:
-            for port, value in sorted(snmp.get_index_value(self.config,
-                                                           stat).items()):
-                if self.config['graphite']:
+            # If invalid stat we specified, probably from cli, we will skip it
+            try:
+                oid = self.config['oids'][stat]
+            except KeyError as exc:
+                msg = "%s could not be found in %s" % (
+                    stat, self.config['config_file']
+                )
+                print >> sys.stderr, msg
+                continue
+
+            # For the case when we have to detect if an stat/oid needs to be
+            # monitored for rate changes
+            if isinstance(oid, list) and oid[1] == 'rate':
+                oid = oid[0]
+                enable_rate = True
+            else:
+                enable_rate = False
+
+            for port, value in sorted(snmp.get_info(self.config, oid).items()):
+                if enable_rate:
+                    try:
+                        # Taking the difference and then converting words to
+                        # bits by multiplying by 4 and then 8. 1 word = 4
+                        # bytes, 1 byte = 8 bits
+                        rate = (int(value) -
+                                int(previous_data[stat][port])) * 32
+                    except (KeyError, TypeError):
+                        # No previous data yet. Setting to zero, this time
+                        # around
+                        rate = 0
+                    else:
+                        # No increase in rate, so we need to force to 0 or
+                        # rate will show up as being a negative number
+                        if rate < 0:
+                            rate = 0
+
+                    # Updating previous data dict with latest info for next
+                    # time
+                    if stat in previous_data:
+                        previous_data[stat][port] = value
+                    else:
+                        previous_data[stat] = {port: value}
+                    value = rate
+
+                # Should we send to carbon
+                if self.config['carbon']:
                     metric = "%s.%s.ports.%s.%s" % (
-                        self.graphite_metric_base, self.config['host'],
+                        self.carbon_metric_base, self.config['host'],
                         port, stat
                     )
                     if self.config['debug']:
-                        print "GRAPHITE DATA - %s: %s" % (metric, value)
+                        print "CARBON DATA - %s: %s" % (metric, value)
 
                     if not self.config['dryrun']:
                         try:
-                            utils.send_to_graphite(self.graphite_server,
-                                                   self.graphite_port,
-                                                   metric, value)
+                            utils.carbon_submit(self.carbon_server,
+                                                self.carbon_port,
+                                                metric, value)
                         except:
                             raise
                 else:
-                    print "stat: %s - port: %s - value: %s" % (
+                    print "stat: %s - port: %s - value: %d" % (
                         stat,  port, value
                     )
+
+        if previous_data:
+            with open(previous_data_file, 'w') as fh:
+                fh.write(yaml.dump(previous_data))
 
 
 def main():
@@ -164,8 +226,8 @@ def main():
                         'going on', default=False)
     parser.add_argument('--verbose', '-v', action='count',
                         help='Shows more info')
-    parser.add_argument('--graphite', action='store_true', help='Send data to '
-                        'graphite?', default=False)
+    parser.add_argument('--carbon', action='store_true', help='Send data to '
+                        'carbon?', default=False)
 
     # Creating subparser.
     subparser = parser.add_subparsers(dest='top_subparser_name')
@@ -186,7 +248,7 @@ def main():
     if args['dryrun']:
         print "*" * 20, "DRYRUN DRYRUN!!", "*" * 20
 
-    if args['graphite'] and not args['dryrun'] and args['debug']:
+    if args['carbon'] and not args['dryrun'] and args['debug']:
         print "*" * 20, "WILL SEND DATA TO GRAPHITE", "*" * 20
 
     # Enable debug if verbose is set

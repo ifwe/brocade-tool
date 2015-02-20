@@ -60,44 +60,19 @@ def get(config, oid, snmp_type):
             return var_binds
 
 
-def get_oid_node(self, stat):
-    """
-    Gets OID node based on specific stat.
-
-    :param self: An object that makes it easier to grab the passwd and host.
-    :param stat: SNMP MIB object.
-    :raises: RuntimeError
-    :returns: OID node for specific stat.
-    """
-    snmp_type = 'getCmd'
-    snmp_args = ('IF-MIB', stat, self.start_port_index)
-
-    try:
-        output = get(self, snmp_type, snmp_args)
-    except (SmiError, RuntimeError) as e:
-        raise RuntimeError(e)
-
-    return output[0][0].getMibNode().getName()
-
-
-def get_index_value(config, stat):
+def get_info(config, oid):
     """
     Get values for a specific OID node, just like snmpwalk does
 
     :param self: An object that makes it easier to grab the passwd and host.
     :param stat: SNMP MIB object.
-    :param oid_node: OID Node return from get_index_value()
+    :param oid_node: OID Node return from get_info()
     :raises: RuntimeError
     :returns: A dict mapping index to values, in which values will be a dict
     as well.
     """
     port_info = {}
     snmp_type = 'nextCmd'
-    try:
-        oid = (config['oids'][stat])
-    except KeyError:
-        msg = "%s could not be found in %s" % (stat, config['config_file'])
-        raise brocade_exceptions.InvalidStat(msg)
 
     try:
         output = get(config, oid, snmp_type)
@@ -106,7 +81,8 @@ def get_index_value(config, stat):
 
     for entry in output:
         port = int(entry[0][0].prettyPrint().split('.')[-1])
-        value = entry[0][1].prettyPrint()
+        value = int(entry[0][1].prettyPrint())
+
         port_info[port] = value
 
     return port_info
