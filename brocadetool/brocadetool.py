@@ -19,7 +19,6 @@ limitations under the License.
 import argparse
 import logging
 import os
-import os.path
 import socket
 import subprocess
 import sys
@@ -77,9 +76,13 @@ class Show(Base):
         ports and user specified stats.
         """
         previous_data = {}
-        previous_data_file='%s/%s_%s' % (
-            os.path.expanduser('~'), self.config['host'], 'previous_data.yaml'
-        )
+        try:
+            previous_data_file = '%s/%s_previous_data.yaml' % (
+                self.config['previous_data_path'], self.config['host']
+            )
+        except KeyError as exc:
+            msg = "Missing %s from %s" % (exc, self.config['config_file'])
+            raise brocade_exceptions.BadConfig(msg)
 
         # Detecting if we will use stats from config or cli
         if not self.config['stat']:
@@ -168,8 +171,14 @@ class Show(Base):
                     )
 
         if previous_data:
-            with open(previous_data_file, 'w') as fh:
-                fh.write(yaml.dump(previous_data))
+            try:
+                with open(previous_data_file, 'w') as fh:
+                    fh.write(yaml.dump(previous_data))
+            except IOError as exc:
+                msg = "Could not write recent data to %s: %s" % (
+                    previous_data_file, exc
+                )
+                raise brocade_exceptions.Brocade(msg)
 
 
 def main():

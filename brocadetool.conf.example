@@ -1,4 +1,7 @@
 ---
+# Location of previous data
+# previous_data_path:
+
 # SNMP community password
 # passwd:
 
