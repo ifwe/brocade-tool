@@ -17,12 +17,12 @@ limitations under the License.
 """
 
 import argparse
+import json
 import logging
 import os
 import socket
 import subprocess
 import sys
-import yaml
 from pysnmp import debug
 
 import snmp
@@ -71,13 +71,12 @@ class Show(Base):
         """
         Show all stat information or specific stats, if --stat is given as an
         argument
-
-        :returns: Newline separated list of ports or newline separated dict of
-        ports and user specified stats.
         """
-        previous_data = {}
+        all_port_info = {}
+        previous_port_rate_data = {}
+
         try:
-            previous_data_file = '%s/%s_previous_data.yaml' % (
+            previous_data_file = '%s/%s_previous_data.json' % (
                 self.config['previous_data_path'], self.config['host']
             )
         except KeyError as exc:
@@ -99,8 +98,12 @@ class Show(Base):
         # Read in any previous data from last run
         try:
             with open(previous_data_file, 'r') as fh:
-                previous_data = yaml.load(fh)
-        except IOError:
+                previous_port_rate_data = json.load(fh)
+        except (IOError, ValueError) as exc:
+            msg = "No previous data found in %s. This is probably OK, if we " \
+                  "haven't cared about any previous data before: %s" % \
+                  (previous_data_file, exc)
+            print >> sys.stderr, msg
             pass
 
         # Lopping through all stats
@@ -130,7 +133,7 @@ class Show(Base):
                         # bits by multiplying by 4 and then 8. 1 word = 4
                         # bytes, 1 byte = 8 bits
                         rate = (int(value) -
-                                int(previous_data[stat][port])) * 32
+                                int(previous_port_rate_data[stat][port])) * 32
                     except (KeyError, TypeError):
                         # No previous data yet. Setting to zero, this time
                         # around
@@ -143,10 +146,10 @@ class Show(Base):
 
                     # Updating previous data dict with latest info for next
                     # time
-                    if stat in previous_data:
-                        previous_data[stat][port] = value
+                    if stat in previous_port_rate_data:
+                        previous_port_rate_data[stat][port] = value
                     else:
-                        previous_data[stat] = {port: value}
+                        previous_port_rate_data[stat] = {port: value}
                     value = rate
 
                 # Should we send to carbon
@@ -166,19 +169,22 @@ class Show(Base):
                         except:
                             raise
                 else:
-                    print "stat: %s - port: %s - value: %d" % (
-                        stat,  port, value
-                    )
+                    if stat in all_port_info:
+                        all_port_info[stat][port] = value
+                    else:
+                        all_port_info[stat] = {port: value}
 
-        if previous_data:
+        if previous_port_rate_data:
             try:
                 with open(previous_data_file, 'w') as fh:
-                    fh.write(yaml.dump(previous_data))
+                    json.dump(previous_port_rate_data, fh)
             except IOError as exc:
                 msg = "Could not write recent data to %s: %s" % (
                     previous_data_file, exc
                 )
                 raise brocade_exceptions.Brocade(msg)
+
+        print json.dumps(all_port_info)
 
 
 def main():
