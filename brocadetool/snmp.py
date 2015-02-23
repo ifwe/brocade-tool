@@ -80,7 +80,7 @@ def get_info(config, oid):
         raise brocade_exceptions.Brocade(exc)
 
     for entry in output:
-        port = int(entry[0][0].prettyPrint().split('.')[-1])
+        port = entry[0][0].prettyPrint().split('.')[-1]
         value = int(entry[0][1].prettyPrint())
 
         port_info[port] = value
