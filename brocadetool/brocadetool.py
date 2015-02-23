@@ -168,11 +168,11 @@ class Show(Base):
                                                 metric, value)
                         except:
                             raise
+
+                if stat in all_port_info:
+                    all_port_info[stat][port] = value
                 else:
-                    if stat in all_port_info:
-                        all_port_info[stat][port] = value
-                    else:
-                        all_port_info[stat] = {port: value}
+                    all_port_info[stat] = {port: value}
 
         if previous_port_rate_data:
             try:
@@ -184,7 +184,8 @@ class Show(Base):
                 )
                 raise brocade_exceptions.Brocade(msg)
 
-        print json.dumps(all_port_info)
+        if all_port_info:
+            print json.dumps(all_port_info)
 
 
 def main():
