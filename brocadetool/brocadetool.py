@@ -50,7 +50,7 @@ class IsPingableAction(argparse.Action):
 
 
 class Base(object):
-    def __init__(self, args):
+    def __init__(self, args, logger):
         try:
             self.config = utils.fetch_config(args['config_file'])
         except IOError:
@@ -64,6 +64,8 @@ class Base(object):
             self.carbon_server = self.config['carbon_server']
             self.carbon_port = self.config['carbon_port']
             self.carbon_metric_base = self.config['carbon_metric_base']
+
+        self.logger = logger
 
 
 class Show(Base):
@@ -101,9 +103,10 @@ class Show(Base):
                 previous_port_rate_data = json.load(fh)
         except (IOError, ValueError) as exc:
             msg = "No previous data found in %s. This is probably OK, if we " \
-                  "haven't cared about any previous data before: %s" % \
+                  "haven't cared about any previous data before or no oid " \
+                  "entries need to keep track of rates: %s" % \
                   (previous_data_file, exc)
-            print >> sys.stderr, msg
+            self.logger.warning(msg)
             pass
 
         # Lopping through all stats
@@ -115,6 +118,7 @@ class Show(Base):
                 msg = "%s could not be found in %s" % (
                     stat, self.config['config_file']
                 )
+                self.logger.warning(msg)
                 print >> sys.stderr, msg
                 continue
 
@@ -285,7 +289,7 @@ def main():
         return 1
 
     try:
-        getattr(klass(args), method)()
+        getattr(klass(args, logger), method)()
         msg = "%s executed \'%s\' on %s" % (user, args, args['host'])
         logger.info(msg)
     except brocade_exceptions.Brocade as exc:
