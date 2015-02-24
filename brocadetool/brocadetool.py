@@ -118,9 +118,9 @@ class Show(Base):
                 msg = "%s could not be found in %s" % (
                     stat, self.config['config_file']
                 )
-                self.logger.warning(msg)
+                self.logger.critical(msg)
                 print >> sys.stderr, msg
-                continue
+                raise brocade_exceptions.BadConfig(msg)
 
             # For the case when we have to detect if an stat/oid needs to be
             # monitored for rate changes
