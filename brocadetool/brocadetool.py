@@ -111,15 +111,13 @@ class Show(Base):
 
         # Lopping through all stats
         for stat in self.config['stat']:
-            # If invalid stat we specified, probably from cli, we will skip it
+            # If invalid stat we specified, probably from cli
             try:
                 oid = self.config['oids'][stat]
             except KeyError as exc:
                 msg = "%s could not be found in %s" % (
                     stat, self.config['config_file']
                 )
-                self.logger.critical(msg)
-                print >> sys.stderr, msg
                 raise brocade_exceptions.BadConfig(msg)
 
             # For the case when we have to detect if an stat/oid needs to be
