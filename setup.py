@@ -47,7 +47,7 @@ LONG_DESCRIPTION = open('README.rst').read()
 
 setup(
     name='brocade-tool',
-    version='0.1.8',
+    version='0.1.9',
     packages=find_packages(),
 
     author="Brian Glogower",

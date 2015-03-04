@@ -23,6 +23,7 @@ import os
 import socket
 import subprocess
 import sys
+from collections import OrderedDict
 from pysnmp import debug
 
 import snmp
@@ -74,8 +75,8 @@ class Show(Base):
         Show all stat information or specific stats, if --stat is given as an
         argument
         """
-        all_port_info = {}
-        previous_port_rate_data = {}
+        all_port_info = dict()
+        previous_port_rate_data = dict()
 
         try:
             previous_data_file = '%s/%s_previous_data.json' % (
@@ -128,7 +129,9 @@ class Show(Base):
             else:
                 enable_rate = False
 
-            for port, value in sorted(snmp.get_info(self.config, oid).items()):
+            for port, value in sorted(snmp.get_info(self.config, oid).items(
+
+            ), key=lambda (port, value): int(port)):
                 if enable_rate:
                     try:
                         # Taking the difference and then converting words to
@@ -151,7 +154,9 @@ class Show(Base):
                     if stat in previous_port_rate_data:
                         previous_port_rate_data[stat][port] = value
                     else:
-                        previous_port_rate_data[stat] = {port: value}
+                        previous_port_rate_data[stat] = OrderedDict(
+                            {port: value}
+                        )
                     value = rate
 
                 # Should we send to carbon
@@ -174,7 +179,7 @@ class Show(Base):
                 if stat in all_port_info:
                     all_port_info[stat][port] = value
                 else:
-                    all_port_info[stat] = {port: value}
+                    all_port_info[stat] = OrderedDict({port: value})
 
         if previous_port_rate_data:
             try:
