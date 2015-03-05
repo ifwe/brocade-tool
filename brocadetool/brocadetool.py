@@ -137,8 +137,7 @@ class Show(Base):
                         # Taking the difference and then converting words to
                         # bits by multiplying by 4 and then 8. 1 word = 4
                         # bytes, 1 byte = 8 bits
-                        rate = (value -
-                                previous_port_rate_data[stat][port]) * 32
+                        rate = value - previous_port_rate_data[stat][port]
                     except (KeyError, TypeError):
                         # No previous data yet. Setting to zero, this time
                         # around
