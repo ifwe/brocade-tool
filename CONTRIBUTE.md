@@ -1,39 +1,8 @@
-# Contribute
+# How to Contribute
+1. Read and complete the [Contributor License Agreement](https://github.com/tagged/brocade-tool/blob/master/CLA.txt).
+1. When complete, email a PDF of the signed agreement to [legal@ifwe.co](mailto:legal@ifwe.co).
+1. Once you have received a confirmation that your signed CLA was received, contribute your code, documentation, or any other materials with a pull request.
 
 ## Coding Style
 * PEP8
-
-## Adding/Changing features
-* Please send your changes as a pull request
-
-### Add a new top level argument, i.e. show
-1. Creating a new parser off of the main subparser
-    * ```
-    parser_show = subparser.add_parser(
-        'show', help='sub-command for showing objects'
-    )
-    ```
-
-### Add a new second level argument, i.e. lb-vservers
-1. Create a new subparser off of parent subparser
-    * `subparser_show = parser_show.add_subparsers(dest='subparser_name')`
-1. Create parser
-
-        subparser_show = parser_show.add_subparsers(dest="subparser_name")
-
-    * If the subparser will need an argument
-        -
-        
-            parser_show_ports = subparser_show.add_parser("ports",
-                help="sub-command for showing stats about all ports"
-            )
-
-1. Create new method under respective class
-    *   
-        
-        class Show(object):
-            def __init__(self):
-                ...
-                
-            def ports(self):
-                ...
+* Indents are 4 whitespaces

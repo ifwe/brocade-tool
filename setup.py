@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright 2014 Tagged Inc.
+Copyright 2015 Ifwe Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -47,11 +47,11 @@ LONG_DESCRIPTION = open('README.rst').read()
 
 setup(
     name='brocade-tool',
-    version='0.1.10',
+    version='0.1.11',
     packages=find_packages(),
 
     author="Brian Glogower",
-    author_email="bglogower@tagged.com",
+    author_email="brian@glogower.org",
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
